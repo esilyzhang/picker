@@ -1,15 +1,37 @@
 import BScroll from 'better-scroll';
 import EventEmitter from '../util/eventEmitter';
-import {extend} from '../util/lang';
-import {
-  createDom,
-  addEvent,
-  addClass,
-  removeClass
-} from '../util/dom';
+import { extend } from '../util/lang';
+import { createDom, addEvent, addClass, removeClass } from '../util/dom';
 import pickerTemplate from './picker.handlebars';
+import pickerCheckboxTemplate from './picker.checkbox.handlebars';
 import itemTemplate from './item.handlebars';
 import './picker.styl';
+$.fn.extend({
+  animateCss: function (animationName, callback) {
+    var animationEnd = (function (el) {
+      var animations = {
+        animation: 'animationend',
+        OAnimation: 'oAnimationEnd',
+        MozAnimation: 'mozAnimationEnd',
+        WebkitAnimation: 'webkitAnimationEnd'
+      };
+
+      for (var t in animations) {
+        if (el.style[t] !== undefined) {
+          return animations[t];
+        }
+      }
+    })(document.createElement('div'));
+
+    this.addClass('animated ' + animationName).one(animationEnd, function () {
+      $(this).removeClass('animated ' + animationName);
+
+      if (typeof callback === 'function') callback();
+    });
+
+    return this;
+  }
+});
 
 export default class Picker extends EventEmitter {
   constructor(options) {
@@ -21,14 +43,23 @@ export default class Picker extends EventEmitter {
       selectedIndex: null,
       showCls: 'show'
     };
-
     extend(this.options, options);
-
     this.data = this.options.data;
-    this.pickerEl = createDom(pickerTemplate({
-      data: this.data,
-      title: this.options.title
-    }));
+
+    if (this.options.el) {
+      this.pickerEl = createDom(
+        pickerCheckboxTemplate({
+          data: this.data
+        })
+      );
+    } else {
+      this.pickerEl = createDom(
+        pickerTemplate({
+          data: this.data,
+          title: this.options.title
+        })
+      );
+    }
 
     document.body.appendChild(this.pickerEl);
 
@@ -45,6 +76,44 @@ export default class Picker extends EventEmitter {
   _init() {
     this.selectedIndex = [];
     this.selectedVal = [];
+    this._bindEvent();
+    if (this.options.el) {
+      $('.picker-checkbox-panel')
+        .find('li')
+        .eq(this.options.selectedIndex)
+        .addClass('checked');
+      $.fn.extend({
+        animateCss: function (animationName, callback) {
+          var animationEnd = (function (el) {
+            var animations = {
+              animation: 'animationend',
+              OAnimation: 'oAnimationEnd',
+              MozAnimation: 'mozAnimationEnd',
+              WebkitAnimation: 'webkitAnimationEnd'
+            };
+
+            for (var t in animations) {
+              if (el.style[t] !== undefined) {
+                return animations[t];
+              }
+            }
+          })(document.createElement('div'));
+
+          this.addClass('animated ' + animationName).one(
+            animationEnd,
+            function () {
+              $(this).removeClass('animated ' + animationName);
+
+              if (typeof callback === 'function') callback();
+            }
+          );
+
+          return this;
+        }
+      });
+
+      return;
+    }
     if (this.options.selectedIndex) {
       this.selectedIndex = this.options.selectedIndex;
     } else {
@@ -52,18 +121,39 @@ export default class Picker extends EventEmitter {
         this.selectedIndex[i] = 0;
       }
     }
-
-    this._bindEvent();
   }
 
   _bindEvent() {
+    const self = this;
+
     addEvent(this.pickerEl, 'touchmove', (e) => {
       e.preventDefault();
     });
+    $('body').on('click', function (e) {
+      self.hide();
+    });
+    if (this.options.el) {
+      $('.picker-checkbox-panel')
+        .find('li')
+        .on('click', function (e) {
+          e.stopPropagation();
+          $(this)
+            .addClass('checked')
+            .siblings()
+            .not(this)
+            .removeClass('checked');
+          self.hide();
+          self.trigger(
+            'picker.select',
+            $(this).attr('data-val'),
+            $('.picker-checkbox-panel').find('li').index(this)
+          );
+        });
 
+      return;
+    }
     addEvent(this.confirmEl, 'click', () => {
       this.hide();
-
       let changed = false;
       for (let i = 0; i < this.data.length; i++) {
         let index = this.wheels[i].getSelectedIndex();
@@ -82,7 +172,11 @@ export default class Picker extends EventEmitter {
       this.trigger('picker.select', this.selectedVal, this.selectedIndex);
 
       if (changed) {
-        this.trigger('picker.valuechange', this.selectedVal, this.selectedIndex);
+        this.trigger(
+          'picker.valuechange',
+          this.selectedVal,
+          this.selectedIndex
+        );
       }
     });
 
@@ -110,30 +204,68 @@ export default class Picker extends EventEmitter {
   }
 
   show(next) {
-    this.pickerEl.style.display = 'block';
     let showCls = this.options.showCls;
-
-    window.setTimeout(() => {
-      addClass(this.maskEl, showCls);
-      addClass(this.panelEl, showCls);
-
-      if (!this.wheels) {
-        this.wheels = [];
-        for (let i = 0; i < this.data.length; i++) {
-          this._createWheel(this.wheelEl, i);
-        }
+    // 判断类型
+    $(this.pickerEl).css('display', 'block');
+    if (this.options.el) {
+      this.pickerEl.style.top =
+        this.options.el.offsetTop + this.options.el.offsetHeight + 'px';
+      this.pickerEl.style.left = this.options.el.offsetLeft + 'px';
+      this.pickerEl.style.width = this.options.el.offsetWidth + 'px';
+      if (this.state === 'in') {
+        $(this.pickerEl).animateCss(
+          'slideOut',
+          function () {
+            this.state = 'out';
+            $(this.pickerEl).removeClass('slideOut').css('display', 'none');
+          }.bind(this)
+        );
       } else {
-        for (let i = 0; i < this.data.length; i++) {
-          this.wheels[i].enable();
-          this.wheels[i].wheelTo(this.selectedIndex[i]);
-        }
+        $(this.pickerEl).animateCss(
+          'slideIn',
+          function () {
+            this.state = 'in';
+            $(this.pickerEl).removeClass('slideIn');
+          }.bind(this)
+        );
       }
-      next && next();
-    }, 0);
+      window.setTimeout(() => {
+        next && next();
+      }, 0);
+    } else {
+      window.setTimeout(() => {
+        addClass(this.pickerEl, 'full');
+        addClass(this.maskEl, showCls);
+        addClass(this.panelEl, showCls);
+
+        if (!this.wheels) {
+          this.wheels = [];
+          for (let i = 0; i < this.data.length; i++) {
+            this._createWheel(this.wheelEl, i);
+          }
+        } else {
+          for (let i = 0; i < this.data.length; i++) {
+            this.wheels[i].enable();
+            this.wheels[i].wheelTo(this.selectedIndex[i]);
+          }
+        }
+        next && next();
+      }, 0);
+    }
   }
 
   hide() {
     let showCls = this.options.showCls;
+    if (this.options.el) {
+      $(this.pickerEl).animateCss(
+        'slideOut',
+        function () {
+          this.state = 'out';
+          $(this.pickerEl).removeClass('slideOut').css('display', 'none');
+        }.bind(this)
+      );
+      return;
+    }
     removeClass(this.maskEl, showCls);
     removeClass(this.panelEl, showCls);
 

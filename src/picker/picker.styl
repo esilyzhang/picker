@@ -1,17 +1,20 @@
 @import "../util/mixin.styl"
 
 .picker
-  display: none
   position: fixed
-  top: 0
   z-index: 100
-  width: 100%
-  height: 100%
+  top: 0
+  display: none
+  min-width: 120px
+  min-height: 64px
   overflow: hidden
   text-align: center
   font-family: 'PingFang SC', 'STHeitiSC-Light', 'Helvetica-Light', arial, sans-serif, 'Droid Sans Fallback'
   font-size: 14px
   unselectable()
+  &.full
+    width: 100%
+    height: 100%
   .picker-mask
     position: absolute
     z-index: 500
@@ -24,6 +27,45 @@
     &.show
       background: rgba(0, 0, 0, 0.6)
       opacity: 1
+  .picker-checkbox-panel
+    background: #fff
+    border: 1px solid #000
+    text-align: left
+    overflow-y: auto
+    max-height: 120px
+    outline: 0;
+    border-width: 1px;
+    border-style: solid;
+    box-sizing: border-box;
+    border-color: rgba(0,0,0,.08);
+    color: #656565;
+    box-shadow: 0 2px 4px 0 rgba(0,0,0,.03),0 4px 5px 0 rgba(0,0,0,.04);
+    font-size: 14px;
+    font-stretch: 100%;
+    font-style: normal;
+    font-weight: 400;
+    line-height: 20px;
+    white-space: normal;
+    ul
+      list-style: none
+      padding: 0
+      li
+        color: #656565;
+        font: inherit;
+        margin: 0;
+        list-style: none;
+        outline: 0;
+        cursor: pointer;
+        padding: 4px 8px;
+        min-height: 1.42857143em;
+        line-height: 1.42857143em;
+        white-space: normal;
+        transition-property: color,background-color,outline-color,box-shadow;
+        transition-duration: .2s;
+        transition-timing-function: ease;
+        &.checked
+          background: #E8444A
+          color: #fff
   .picker-panel
     position: absolute
     z-index: 600
@@ -93,7 +135,81 @@
             color: #333
   .picker-footer
     height: 20px
+.animate-fast{
+  -webkit-animation-delay: 0s;
+  animation-delay: 0s;
+  -webkit-animation-duration: .6s;
+  animation-duration: .6s;
+}
+.slideOut {
+  -webkit-animation-name: slideOut;
+  animation-name: slideOut;
+}
 
+@-webkit-keyframes slideOut {
+  from {
+    -webkit-transform: translate3d(0, 0, 0);
+    transform: translate3d(0, 0, 0);
+    opacity: 1;
+  }
+
+  to {
+    visibility: hidden;
+    -webkit-transform: translate3d(0, 100%, 0);
+    transform: translate3d(0, 100%, 0);
+    opacity: 0;
+  }
+}
+
+@keyframes slideOut {
+  from {
+    -webkit-transform: translate3d(0, 0, 0);
+    transform: translate3d(0, 0, 0);
+    opacity: 1;
+  }
+
+  to {
+    visibility: hidden;
+    -webkit-transform: translate3d(0, 100%, 0);
+    transform: translate3d(0, 100%, 0);
+    opacity: 0;
+  }
+}
+
+@-webkit-keyframes slideIn {
+  from {
+    -webkit-transform: translate3d(0, 100%, 0);
+    transform: translate3d(0, 100%, 0);
+    visibility: visible;
+    opacity: 0;
+  }
+
+  to {
+    -webkit-transform: translate3d(0, 0, 0);
+    transform: translate3d(0, 0, 0);
+    opacity: 1;
+  }
+}
+
+@keyframes slideIn {
+  from {
+    -webkit-transform: translate3d(0, 100%, 0);
+    transform: translate3d(0, 100%, 0);
+    visibility: visible;
+    opacity: 0;
+  }
+
+  to {
+    -webkit-transform: translate3d(0, 0, 0);
+    transform: translate3d(0, 0, 0);
+    opacity: 1;
+  }
+}
+
+.slideIn {
+  -webkit-animation-name: slideIn;
+  animation-name: slideIn;
+}
 @media (-webkit-min-device-pixel-ratio: 1.5), (min-device-pixel-ratio: 1.5)
   .border-1px
     &::after, &::before
